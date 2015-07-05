@@ -37,23 +37,28 @@ module Raijin
 private
     MICROSECONDS_IN_SECOND = 1_000_000
     def print_call_infos(call_infos, output)
-      last_index = call_infos.size - 1
-      outputed_nodes_count = 0
-      call_infos.each_with_index do |call_info, index|
+      emitted_nodes_count = 0
+      call_infos.each do |call_info|
         total_time = call_info.total_time
         if total_time / @thread_total_time < @min_ratio
           next
         end
-        self_time = call_info.self_time * MICROSECONDS_IN_SECOND
-        target = call_info.target
-        full_name = target.full_name
-        id = next_id
-        @samples << id
-        @timestamps << @total + self_time
-        if outputed_nodes_count > 0
+        if emitted_nodes_count > 0
           output << ','
         end
-        output << "{
+        print_call_info(call_info, output)
+        emitted_nodes_count += 1
+      end
+    end
+
+    def print_call_info(call_info, output)
+      self_time = call_info.self_time * MICROSECONDS_IN_SECOND
+      target = call_info.target
+      full_name = target.full_name
+      id = next_id
+      @samples << id
+      @timestamps << @total + self_time
+      output << "{
   \"functionName\": \"#{full_name}\",
   \"scriptId\": 0,
   \"url\": \"file://#{target.source_file}\",
@@ -68,12 +73,10 @@ private
   \"id\": #{id},
   \"children\": ["
 
-        print_call_infos(call_info.children, output)
+      print_call_infos(call_info.children, output)
 
-        output << ']
+      output << ']
 }'
-        outputed_nodes_count += 1
-      end
     end
 
     def next_call_uid
